@@ -1,5 +1,4 @@
-const { sortPages } = require("./report.js");
-const { test, expect } = require("@jest/globals");
+import { sortPages } from "./report";
 
 describe("report", () => {
   test("sortPages 2 pages desc", () => {

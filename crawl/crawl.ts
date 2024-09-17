@@ -1,13 +1,18 @@
 const { JSDOM } = require("jsdom");
 
-async function crawlPage(baseURL, currnetURL, pages) {
+export async function crawlPage(
+  baseURL: string,
+  currentURL: string,
+  pages: Pages
+): Promise<Record<string, number>> {
   const baseURLObject = new URL(baseURL);
-  const currnetURLObject = new URL(currnetURL);
+  const currentURLObject = new URL(currentURL);
 
-  if (baseURLObject.hostname !== currnetURLObject.hostname) {
+  if (baseURLObject.hostname !== currentURLObject.hostname) {
     return pages;
   }
-  const normalizedCurrentURL = normalizeURL(currnetURL);
+
+  const normalizedCurrentURL = normalizeURL(currentURL);
 
   if (pages[normalizedCurrentURL] > 0) {
     pages[normalizedCurrentURL]++;
@@ -15,27 +20,29 @@ async function crawlPage(baseURL, currnetURL, pages) {
   }
 
   pages[normalizedCurrentURL] = 1;
-
-  console.log(`Actively crawling: ${currnetURL}`);
+  console.log(`Actively crawling: ${currentURL}`);
 
   try {
-    const resp = await fetch(currnetURL);
+    const resp = await fetch(currentURL);
 
     if (resp.status > 399) {
       console.log(
-        `Error in fetch with status code: ${resp.status} on page: ${currnetURL}`
+        `Error in fetch with status code: ${resp.status} on page: ${currentURL}`
       );
       return pages;
     }
 
     const contentType = resp.headers.get("content-type");
 
-    if (!contentType.includes("text/html")) {
+    if (!contentType || !contentType.includes("text/html")) {
       console.log(
-        `No HTML found, content type is ${contentType} on page: ${currnetURL}`
+        `No HTML found, content type is ${
+          contentType || "unknown"
+        } on page: ${currentURL}`
       );
       return pages;
     }
+
     const htmlBody = await resp.text();
     const nextURLs = getURLsFromHTML(htmlBody, baseURL);
 
@@ -45,11 +52,16 @@ async function crawlPage(baseURL, currnetURL, pages) {
 
     return pages;
   } catch (error) {
-    console.log(`Error in fetch: ${error.message}, on page ${currnetURL}`);
+    if (error instanceof Error) {
+      console.log(`Error in fetch: ${error.message}, on page ${currentURL}`);
+    } else {
+      console.log(`Unknown error occurred on page ${currentURL}`);
+    }
+    return pages;
   }
 }
 
-function getURLsFromHTML(htmlBody, baseURL) {
+export function getURLsFromHTML(htmlBody: string, baseURL: string) {
   const urls = [];
   const dom = new JSDOM(htmlBody);
   const linkElements = dom.window.document.querySelectorAll("a");
@@ -60,14 +72,22 @@ function getURLsFromHTML(htmlBody, baseURL) {
         const urlObject = new URL(`${baseURL}${element.href}`);
         urls.push(urlObject.href);
       } catch (error) {
-        console.log(`Error with relative url: ${error.message}`);
+        if (error instanceof Error) {
+          console.log(`Error with relative url: ${error.message}`);
+        } else {
+          console.log(`Unknown error occurred on page ${baseURL}`);
+        }
       }
     } else {
       try {
         const urlObject = new URL(element.href);
         urls.push(urlObject.href);
       } catch (error) {
-        console.log(`Error with absolute url: ${error.message}`);
+        if (error instanceof Error) {
+          console.log(`Error with absolute url: ${error.message}`);
+        } else {
+          console.log(`Unknown error occurred on page ${baseURL}`);
+        }
       }
     }
   }
@@ -75,7 +95,7 @@ function getURLsFromHTML(htmlBody, baseURL) {
   return urls;
 }
 
-function normalizeURL(urlString) {
+export function normalizeURL(urlString: string) {
   const urlObject = new URL(urlString);
   const hostPath = `${urlObject.hostname}${urlObject.pathname}`;
   if (hostPath.length > 0 && hostPath.slice(-1) === "/") {
@@ -83,9 +103,3 @@ function normalizeURL(urlString) {
   }
   return hostPath;
 }
-
-module.exports = {
-  normalizeURL,
-  getURLsFromHTML,
-  crawlPage,
-};

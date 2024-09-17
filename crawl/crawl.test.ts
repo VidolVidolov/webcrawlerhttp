@@ -1,5 +1,4 @@
-const { normalizeURL, getURLsFromHTML } = require("./crawl.js");
-const { test, expect } = require("@jest/globals");
+import { getURLsFromHTML, normalizeURL } from "./crawl";
 
 describe("normailizeUrl", () => {
   test("strip protocol", () => {
@@ -102,7 +101,7 @@ describe("getURLsFromHTML", () => {
     const inputBaseUrl = "https://blog.boot.dev";
 
     const actual = getURLsFromHTML(htmlBody, inputBaseUrl);
-    const expected = [];
+    const expected: string[] = [];
     expect(actual).toEqual(expected);
   });
 });
